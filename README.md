@@ -1,2 +1,0 @@
-# Skrill-vercel
-Without watermark 
