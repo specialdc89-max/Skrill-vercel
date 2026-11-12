@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<meta name="google-site-verification" content="UQMdBxhwaOZBoOXvdARrM-y0Ob0_V69og0zEIsFsCkY" />
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
@@ -1252,17 +1254,52 @@
             navigateTo('screen-home');
         }
 
-        window.proceedToAmount = function() {
-            const email = document.getElementById('transfer-recipient-email').value;
-            if(!email) { alert('Please enter an email address.'); return; }
-            pendingTransfer.recipient = email;
-            document.getElementById('transfer-target-display').innerText = `Sending to ${email}`;
+                window.proceedToAmount = async function() {
+            const emailInput = document.getElementById('transfer-recipient-email');
+            const email = emailInput.value.trim().toLowerCase();
             
-            const curr = currentUserData.currency || 'NGN';
-            const sym = getCurrencySymbol(curr);
-            document.getElementById('transfer-currency-label').innerText = `Amount (${curr}) - Available: ${sym}${(currentUserData.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            
-            navigateTo('screen-transfer-amount');
+            if(!email) { 
+                alert('Please enter an email address.'); 
+                return; 
+            }
+
+            // Prevent sending to yourself
+            if(email === currentUserData.email.toLowerCase()) {
+                alert('You cannot send money to yourself.');
+                return;
+            }
+
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex';
+
+            try {
+                // Check if user exists in Firebase database
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("email", "==", email));
+                const querySnap = await getDocs(q);
+
+                loader.style.display = 'none';
+
+                if (querySnap.empty) {
+                    alert('This user is not found');
+                    return;
+                }
+
+                // If user exists, proceed normally
+                pendingTransfer.recipient = email;
+                document.getElementById('transfer-target-display').innerText = `Sending to ${email}`;
+                
+                const curr = currentUserData.currency || 'NGN';
+                const sym = getCurrencySymbol(curr);
+                document.getElementById('transfer-currency-label').innerText = `Amount (${curr}) - Available: ${sym}${(currentUserData.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                
+                navigateTo('screen-transfer-amount');
+
+            } catch (err) {
+                loader.style.display = 'none';
+                console.error("Error verifying recipient:", err);
+                alert('Could not verify recipient. Please try again.');
+            }
         }
 
         window.validateAndProceedToPin = function() {
